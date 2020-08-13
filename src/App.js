@@ -1,185 +1,139 @@
-import React from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import './App.css';
-import Tone from 'tone'
+import { Synth, MonoSynth, Loop, Transport } from 'tone'
 import Rotation from "./components/Rotation"
 
 
+export default function App() {
+  //audio
+  const [time, setTime] = useState(0)
+  const [loops, setLoops] = useState([])
 
-class Wrapper extends React.Component {
-  render(){
-    return(
-      <div className="container">
-        {this.props.children}
-      </div>
-    )
-  }
+  const bass = useMemo(()=>new MonoSynth().toMaster(),[])
+  const pulse = useCallback((time)=>{
+    loops.forEach(loop => {
+      loop.playNotes((loop.instrument, "C2", time, loop.timesToPlay))
+    })
+  }, [bass, loops])
 
+  const [outerInterval, setOuterInterval] = useState(60)
 
-}
-export default class App extends React.Component {
-  constructor(props){
-    super(props)
+  const [outerLoop, setOuterLoop] = useState(new Loop(pulse, outerInterval))
+  const [transport] = useState(Transport)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [transportTime, setTransportTime] = useState()
 
-    //audio
-    let loops = []
-    let outerInterval = 1
-    const outerLoop = new Tone.Loop(this.pulse, outerInterval)
-    let transport = Tone.Transport
-    let isPlaying = false
-    let transportTime
-    let time = 0
-
-
-    //visual
-    let orbits = []
-    const svgHeight = 1000
-    const svgWidth = 1000
-    let innerRadius = 100
+  
+  //visual
+  const [orbits, setOrbits] = useState([])
+  const [svgHeight, setSvgHeight] = useState(window.innerHeight)
+  const [svgWidth, setSvgWidth] = useState(window.innerWidth)
+  const [innerRadius, setInnerRadius] = useState(100)
 
 
-    this.state = {
-      transportTime,
-      isPlaying,
-      loops,
-      outerInterval,
-      transport,
-      outerLoop,
-      orbits, 
-      svgHeight, 
-      svgWidth,
-      innerRadius, 
-      time
+
+
+
+  const animate = useCallback((time)=>{
+    setTime(time)
+    requestAnimationFrame(animate)
+  }, [])
+
+  const startStopLoop = useCallback(()=>{
+    if(!isPlaying){
+      requestAnimationFrame(animate)
+      outerLoop.start(0)
+      transport.start()
+    } else if (isPlaying) {
+      cancelAnimationFrame(animate)
+      transport.stop()
+      outerLoop.stop()
     }
-  }
+    setIsPlaying(!isPlaying)
+  }, [isPlaying, animate, transport, outerLoop])
 
-  createOrbit = (
-      {radius=10, 
+
+  const createInnerLoop = useCallback(()=> {
+    //get array of times to TAR
+    let divisions = 8
+    const createTimesToPlay = (divisions, interval) => {
+      const times = []
+      for(let i = 0; i<divisions; i++){
+        times.push(i*(interval/divisions))
+      }
+      return times
+    }
+
+    const timesToPlay = createTimesToPlay(divisions, outerInterval)
+
+    const newLoop = {
+      divisions: divisions,
+      times: timesToPlay,
+      playNotes: (instrument, note, time, timesToPlay) => {
+        timesToPlay.forEach(timeToPlay => {
+          instrument.triggerAttackRelease(note, "16n", timeToPlay, 0.5)
+        })
+      },
+      instrument: new Synth().toDestination()
+    }
+    const createOrbit = (
+      //defaults
+      radius=40, 
       stroke="black", 
       fill="none", 
-      cx=this.state.svgWidth/2, 
-      cy=this.state.svgHeight/2, 
-      hasOrbit=false, 
-      division=0}) => {
-    let orbit = {
-        radius: radius,
-        stroke: stroke,
-        fill: fill,
-        cx: cx,
-        cy: cy,
-        hasOrbit: hasOrbit,
-        division: division
-    }
-    return orbit
-  }
+      strokeWidth=3,
+      cx=svgWidth/2, 
+      cy=svgHeight/2, 
+      division=divisions) =>{
+        const orbit = {
+          radius: radius,
+          strokeWidth: strokeWidth,
+          stroke: stroke,
+          fill: fill,
+          cx: cx,
+          cy: cy,
+          division: division
+        }
+      return orbit
 
-  componentDidMount() {
-    let width = window.innerWidth
-    let height = window.innerHeight
-
-    this.setState({
-      svgHeight: height,
-      svgWidth: width,
-    })
-
-  }
-
-  pulse = time => {
-    if(this.state.loops.length > 0){
-      this.state.loops.forEach(loop => {
-        loop.loop.start(0)
-      })
-    }
-  }
-  
-
-  animate = (time) => {
-    this.setState({
-      time: time
-    })
-    requestAnimationFrame(this.animate)
-  }
-  startStopLoop = () => {
-    if(!this.state.isPlaying){
-      this.rafID = requestAnimationFrame(this.animate)
-      this.state.outerLoop.start(0)
-      this.state.transport.start()
-      
-    } else if (this.state.isPlaying){
-      cancelAnimationFrame(this.animate)
-      this.state.transport.stop()
-      this.state.outerLoop.stop()
-    }
-    this.setState({
-      isPlaying: !this.state.isPlaying
-    })
+      }
+    const orbit = createOrbit(innerRadius)
+    console.log(orbit.division)
+    setInnerRadius(innerRadius+20, "black", "none", 3, svgWidth/2, svgHeight/2, divisions)
+    setLoops([...loops, newLoop])
+    setOrbits([...orbits, orbit])
 
 
 
-  }
 
-  createInnerLoop = (division = 8, callback) => {
-  
-    let synth = new Tone.PluckSynth().toMaster()
-    callback = ((time) => {
-      synth.triggerAttackRelease("C4", "16n", time, 0.5)
-    })
+  }, [setInnerRadius, outerInterval, setLoops, setOrbits, loops, orbits])
 
-    
-
-    let randomDivision = 4
-    let interval = this.state.outerInterval / randomDivision
-    const innerLoop = {
-      division: randomDivision,
-      synth,
-      interval,
-      loop: new Tone.Loop(callback, interval)
-    }
-
-    let radius = this.state.innerRadius+20
-    //add svg orbit
-    let orbit = this.createOrbit({
-      radius: radius,
-      
-      hasOrbit: true,
-      division: randomDivision
-    })
-
-
-    this.setState({
-      loops: [...this.state.loops, innerLoop],
-      orbits: [...this.state.orbits, orbit],
-      innerRadius: radius
-    })
-  }
-
-
-  render() {
-
-    const {orbits, svgHeight, svgWidth, time, outerInterval} = this.state
-    return(
-      <Wrapper className="wrapper">
-         <div className="outer-container">
-         <button onClick={this.startStopLoop}>
-              {this.state.isPlaying ? "stop" : "start"}
-            </button>
-            <button onClick={()=>this.createInnerLoop()}>
-              new division
-            </button>
-          <div className="inner-container">
-            <div className="svg-container">
-              <svg width={svgWidth} height={svgHeight}>
-                {orbits.map((orbit, i) => {
-                  return (
-                    <Rotation time={time} key={i} interval={outerInterval} orbit={orbits[i]} />
-                  )
-                })}
-              </svg>
-            </div>
+  useEffect(()=>{
+    console.log(loops, orbits)
+  }, [loops,orbits])
+  return (
+    <div className="wrapper">
+      <div className="outer-container">
+        <button onClick={startStopLoop}>
+            {isPlaying ? "stop" : "start"}
+          </button>
+          <button onClick={()=>createInnerLoop()}>
+            new division
+          </button>
+        <div className="inner-container">
+          <div className="svg-container">
+            <svg width={svgWidth} height={svgHeight}>
+              {orbits.map((orbit, i) => {
+                return (
+                  <Rotation time={time} key={i} interval={outerInterval} orbit={orbits[i]} />
+                )
+              })}
+            </svg>
           </div>
-         </div>
-      </Wrapper> 
-    )
-  }
+        </div>
+      </div>
+    </div>
+  )
 }
 
 

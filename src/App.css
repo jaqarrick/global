@@ -2,3 +2,6 @@
   text-align: center;
 }
 
+.svg-container {
+  border: solid red 5px;
+}

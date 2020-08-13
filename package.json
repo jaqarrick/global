@@ -9,7 +9,7 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-scripts": "3.4.1",
-    "tone": "^13.8.25"
+    "tone": "^14.7.39"
   },
   "scripts": {
     "start": "react-scripts start",
