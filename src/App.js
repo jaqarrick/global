@@ -2,6 +2,8 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import './App.css';
 import { Synth, MonoSynth, Loop, Transport } from 'tone'
 import Rotation from "./components/Rotation"
+import InnerLoop from './components/InnerLoop'
+import { Tone } from 'tone/build/esm/core/Tone';
 
 
 export default function App() {
@@ -9,30 +11,27 @@ export default function App() {
   const [time, setTime] = useState(0)
   const [loops, setLoops] = useState([])
 
-  const bass = useMemo(()=>new MonoSynth().toMaster(),[])
   const pulse = useCallback((time)=>{
     loops.forEach(loop => {
-      loop.playNotes((loop.instrument, "C2", time, loop.timesToPlay))
+      loop.loop.start()
     })
-  }, [bass, loops])
+  }, [loops])
 
-  const [outerInterval, setOuterInterval] = useState(60)
-
+  const [outerInterval, setOuterInterval] = useState(4)
   const [outerLoop, setOuterLoop] = useState(new Loop(pulse, outerInterval))
   const [transport] = useState(Transport)
   const [isPlaying, setIsPlaying] = useState(false)
   const [transportTime, setTransportTime] = useState()
 
-  
+
+  useEffect(()=>{
+    outerLoop.callback = pulse
+  }, [pulse, outerLoop])
   //visual
   const [orbits, setOrbits] = useState([])
   const [svgHeight, setSvgHeight] = useState(window.innerHeight)
   const [svgWidth, setSvgWidth] = useState(window.innerWidth)
   const [innerRadius, setInnerRadius] = useState(100)
-
-
-
-
 
   const animate = useCallback((time)=>{
     setTime(time)
@@ -54,32 +53,12 @@ export default function App() {
 
 
   const createInnerLoop = useCallback(()=> {
-    //get array of times to TAR
-    let divisions = 8
-    const createTimesToPlay = (divisions, interval) => {
-      const times = []
-      for(let i = 0; i<divisions; i++){
-        times.push(i*(interval/divisions))
-      }
-      return times
-    }
-
-    const timesToPlay = createTimesToPlay(divisions, outerInterval)
-
-    const newLoop = {
-      divisions: divisions,
-      times: timesToPlay,
-      playNotes: (instrument, note, time, timesToPlay) => {
-        timesToPlay.forEach(timeToPlay => {
-          instrument.triggerAttackRelease(note, "16n", timeToPlay, 0.5)
-        })
-      },
-      instrument: new Synth().toDestination()
-    }
+    let divisions = Math.ceil(Math.random()*8)
+    const innerLoop = new InnerLoop(outerInterval/divisions)
     const createOrbit = (
       //defaults
       radius=40, 
-      stroke="black", 
+      stroke="none", 
       fill="none", 
       strokeWidth=3,
       cx=svgWidth/2, 
@@ -97,20 +76,13 @@ export default function App() {
       return orbit
 
       }
-    const orbit = createOrbit(innerRadius)
-    console.log(orbit.division)
-    setInnerRadius(innerRadius+20, "black", "none", 3, svgWidth/2, svgHeight/2, divisions)
-    setLoops([...loops, newLoop])
+    const orbit = createOrbit(innerRadius,"black", "none", 3, svgWidth/2, svgHeight/2, divisions)
+    setInnerRadius(innerRadius+20)
+    setLoops([...loops, innerLoop])
     setOrbits([...orbits, orbit])
+  }, [setInnerRadius, outerInterval, setLoops, setOrbits, loops, orbits, svgHeight, svgWidth, innerRadius])
 
 
-
-
-  }, [setInnerRadius, outerInterval, setLoops, setOrbits, loops, orbits])
-
-  useEffect(()=>{
-    console.log(loops, orbits)
-  }, [loops,orbits])
   return (
     <div className="wrapper">
       <div className="outer-container">

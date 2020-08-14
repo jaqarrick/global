@@ -16,7 +16,7 @@ const Rotation = (props) => {
 
     return (
         <>
-            <circle r={radius} cx={originX} cy={originY} stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
+            <circle r={radius} cx={originX} cy={originY} stroke="none" strokeWidth={strokeWidth} fill={fill} />
            {[...Array(division)].map((_, i) => {
                 const initialDeg = i*d
                 const initialRadian = degreesToRadians(initialDeg)
