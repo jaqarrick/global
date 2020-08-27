@@ -1,0 +1,25 @@
+.controls-container {
+    position: fixed;
+    display: flex;
+    bottom: 0;
+    right: 0;
+    margin-bottom: -50px;
+    margin-right: 1.5%;
+}
+
+.controls-container button {
+    background: none;
+    border:none;
+    font-size: 6rem;    
+    color: whitesmoke;
+    opacity:0.6
+}
+.controls-container button:hover {
+    color: rgb(86, 86, 216);
+    opacity: 1
+}
+.controls-container .reset-button {
+    font-size: 10rem;
+    margin-bottom: 3rem;
+}
+

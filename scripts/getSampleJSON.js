@@ -25,16 +25,18 @@ const getURLs = (instruments) => {
 		switch(inst){
 			case 'celesta': 
 				return (printList(inst, 0))
-				break
 			case 'English-Horn':
 				return (printList(inst, 0))
-				break
 			case 'harp':
 				return(printList(inst, 7))
-				break
 			case 'stac-PB':
 				return(printList(inst, 13))
-				break
+			case 'Oboe':
+				return(printList(inst, 5))
+			case 'bass':
+				return(printList(inst, 15))
+			case 'violin':
+				return(printList(inst, 20))
 			default: throw "folder not found"
 		}
 	})
